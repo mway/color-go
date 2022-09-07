@@ -16,3 +16,6 @@ bench PKG="./..." *ARGS="":
 
 lint PKG="./...":
     golangci-lint run --new=false {{ PKG }}
+
+run COMMAND *ARGS:
+    go run . {{ COMMAND }} {{ ARGS }}
