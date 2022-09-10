@@ -128,7 +128,28 @@ var (
 		BgHiCyan:     "\x1b[106m",
 		BgHiWhite:    "\x1b[107m",
 	}
+
+	_ Style = Color(0)
+	_ Style = styles(nil)
 )
+
+// A Style styles text.
+type Style interface {
+	Escape() string
+	Fprint(io.Writer, ...any) (int, error)
+	Fprintf(io.Writer, string, ...any) (int, error)
+	Fprintln(io.Writer, ...any) (int, error)
+	Print(...any)
+	Printf(string, ...any)
+	Println(...any)
+	Reset() string
+	Sprint(...any) string
+	Sprintf(string, ...any) string
+	Sprintln(...any) string
+	String() string
+	Wrap(string) string
+	WrapN(...string) string
+}
 
 // A Color is a terminal color.
 type Color uint8
@@ -292,16 +313,15 @@ func (c Color) Fprintln(w io.Writer, args ...any) (int, error) {
 	return int(n), err
 }
 
-// Colors are a group of [Color]s.
-type Colors []Color
+type styles []Style
 
 // Combine combines colors into [Colors].
-func Combine(colors ...Color) Colors {
-	return append([]Color(nil), colors...)
+func Combine(s ...Style) Style {
+	return append(styles(nil), s...)
 }
 
 // Escape returns a concatenation of c's escape codes.
-func (c Colors) Escape() string {
+func (c styles) Escape() string {
 	buf := _builders.Get()
 	defer _builders.Put(buf)
 
@@ -313,7 +333,7 @@ func (c Colors) Escape() string {
 }
 
 // Reset returns the escape code the reset output after c.
-func (c Colors) Reset() string {
+func (c styles) Reset() string {
 	if len(c) == 0 {
 		return ""
 	}
@@ -322,7 +342,7 @@ func (c Colors) Reset() string {
 }
 
 // String returns c's escape code, regardless of whether color is enabled.
-func (c Colors) String() string {
+func (c styles) String() string {
 	buf := _builders.Get()
 	defer _builders.Put(buf)
 
@@ -334,12 +354,12 @@ func (c Colors) String() string {
 }
 
 // Wrap wraps str with c.
-func (c Colors) Wrap(str string) string {
+func (c styles) Wrap(str string) string {
 	return c.Escape() + str + c.Reset()
 }
 
 // WrapN wraps strs, joined by spaces, with c.
-func (c Colors) WrapN(strs ...string) string {
+func (c styles) WrapN(strs ...string) string {
 	buf := _builders.Get()
 	defer _builders.Put(buf)
 
@@ -354,7 +374,7 @@ func (c Colors) WrapN(strs ...string) string {
 }
 
 // Print prints args as in fmt.Print, but wrapped in c.
-func (c Colors) Print(args ...any) {
+func (c styles) Print(args ...any) {
 	defer _stdout.Flush() //nolint:errcheck
 
 	_stdout.WriteString(c.Escape()) //nolint:errcheck
@@ -363,7 +383,7 @@ func (c Colors) Print(args ...any) {
 }
 
 // Printf prints msg and args as in fmt.Printf, but wrapped in c.
-func (c Colors) Printf(msg string, args ...any) {
+func (c styles) Printf(msg string, args ...any) {
 	defer _stdout.Flush() //nolint:errcheck
 
 	_stdout.WriteString(c.Escape())    //nolint:errcheck
@@ -372,7 +392,7 @@ func (c Colors) Printf(msg string, args ...any) {
 }
 
 // Println prints args as in fmt.Println, but wrapped in c.
-func (c Colors) Println(args ...any) {
+func (c styles) Println(args ...any) {
 	defer _stdout.Flush() //nolint:errcheck
 
 	buf := _builders.Get()
@@ -396,19 +416,19 @@ func (c Colors) Println(args ...any) {
 }
 
 // Sprint returns a string containing args as in fmt.Sprint, but wrapped in c.
-func (c Colors) Sprint(args ...any) string {
+func (c styles) Sprint(args ...any) string {
 	return c.Escape() + fmt.Sprint(args...) + c.Reset()
 }
 
 // Sprintf returns a string containing msg and args as in fmt.Sprintf, but
 // wrapped in c.
-func (c Colors) Sprintf(msg string, args ...any) string {
+func (c styles) Sprintf(msg string, args ...any) string {
 	return c.Escape() + fmt.Sprintf(msg, args...) + c.Reset()
 }
 
 // Sprintln returns a string containing args as in fmt.Sprintln, but wrapped
 // in c.
-func (c Colors) Sprintln(args ...any) string {
+func (c styles) Sprintln(args ...any) string {
 	buf := _builders.Get()
 	defer _builders.Put(buf)
 
@@ -430,7 +450,7 @@ func (c Colors) Sprintln(args ...any) string {
 }
 
 // Fprint prints args to w as in fmt.Fprint, but wrapped in c.
-func (c Colors) Fprint(w io.Writer, args ...any) (int, error) {
+func (c styles) Fprint(w io.Writer, args ...any) (int, error) {
 	esc := c.Escape()
 	fmt.Fprint(w, esc)                 //nolint:errcheck
 	n, _ := fmt.Fprint(w, args...)     //nolint:errcheck
@@ -439,7 +459,7 @@ func (c Colors) Fprint(w io.Writer, args ...any) (int, error) {
 }
 
 // Fprintf prints msg and args to w as in [fmt.Fprintf], but wrapped in c.
-func (c Colors) Fprintf(w io.Writer, msg string, args ...any) (int, error) {
+func (c styles) Fprintf(w io.Writer, msg string, args ...any) (int, error) {
 	esc := c.Escape()
 	fmt.Fprint(w, esc)                   //nolint:errcheck
 	n, _ := fmt.Fprintf(w, msg, args...) //nolint:errcheck
@@ -448,7 +468,7 @@ func (c Colors) Fprintf(w io.Writer, msg string, args ...any) (int, error) {
 }
 
 // Fprintln prints args to w as in [fmt.Fprintln], but wrapped in c.
-func (c Colors) Fprintln(w io.Writer, args ...any) (int, error) {
+func (c styles) Fprintln(w io.Writer, args ...any) (int, error) {
 	buf := _builders.Get()
 	defer _builders.Put(buf)
 
@@ -473,6 +493,61 @@ func (c Colors) Fprintln(w io.Writer, args ...any) (int, error) {
 // Enabled returns whether color is enabled based on terminal settings.
 func Enabled() bool {
 	return _hasColor
+}
+
+// Wrap is a convenience function that calls s.Wrap(msg).
+func Wrap(s Style, msg string) string {
+	return s.Wrap(msg)
+}
+
+// WrapN is a convenience function that calls s.WrapN(msgs...).
+func WrapN(s Style, msgs ...string) string {
+	return s.WrapN(msgs...)
+}
+
+// Print is a convenience function that calls s.Print(args...).
+func Print(s Style, args ...any) {
+	s.Print(args...)
+}
+
+// Printf is a convenience function that calls s.Printf(msg, args...).
+func Printf(s Style, msg string, args ...any) {
+	s.Printf(msg, args...)
+}
+
+// Println is a convenience function that calls s.Println(args...).
+func Println(s Style, args ...any) {
+	s.Println(args...)
+}
+
+// Sprint is a convenience function that calls s.Sprint(args...).
+func Sprint(s Style, args ...any) string {
+	return s.Sprint(args...)
+}
+
+// Sprintf is a convenience function that calls s.Sprintf(msg, args...).
+func Sprintf(s Style, msg string, args ...any) string {
+	return s.Sprintf(msg, args...)
+}
+
+// Sprintln is a convenience function that calls s.Sprintln(args...).
+func Sprintln(s Style, args ...any) string {
+	return s.Sprintln(args...)
+}
+
+// Fprint is a convenience function that calls s.Fprint(dst, args...).
+func Fprint(dst io.Writer, s Style, args ...any) (int, error) {
+	return s.Fprint(dst, args...)
+}
+
+// Fprintf is a convenience function that calls s.Fprintf(dst, msg, args...).
+func Fprintf(dst io.Writer, s Style, msg string, args ...any) (int, error) {
+	return s.Fprintf(dst, msg, args...)
+}
+
+// Fprintln is a convenience function that calls s.Fprintln(dst, args...).
+func Fprintln(dst io.Writer, s Style, args ...any) (int, error) {
+	return s.Fprintln(dst, args...)
 }
 
 func isset(key string) bool {

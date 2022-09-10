@@ -66,3 +66,12 @@ func BenchmarkColor_Fprint(b *testing.B) {
 		FgCyan.Fprint(io.Discard, "x") //nolint:errcheck
 	}
 }
+
+func BenchmarkFprint(b *testing.B) {
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		Fprint(io.Discard, FgCyan, "x") //nolint:errcheck
+	}
+}

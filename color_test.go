@@ -59,62 +59,67 @@ func TestColor_Reset(t *testing.T) {
 	require.Equal(t, "", Combine().Reset())
 }
 
-func TestColor_String(t *testing.T) {
+func Test_String(t *testing.T) {
 	for i, esc := range _strings {
 		if len(esc) == 0 {
 			continue
+		}
+
+		styles := []Style{
+			Color(i),
+			Combine(Color(i)),
 		}
 
 		_hasColor = false
-		require.Equal(t, esc, Color(i).String())
-		require.Equal(t, esc, Combine(Color(i)).String())
+		for _, style := range styles {
+			require.Equal(t, esc, style.String())
+		}
 		_hasColor = true
-		require.Equal(t, esc, Color(i).String())
-		require.Equal(t, esc, Combine(Color(i)).String())
+		for _, style := range styles {
+			require.Equal(t, esc, style.String())
+		}
 	}
 }
 
-func TestColor_Wrap(t *testing.T) {
+func TestWrap(t *testing.T) {
 	for i, esc := range _strings {
 		if len(esc) == 0 {
 			continue
 		}
 
-		{
-			c := Color(i)
-			require.Equal(t, c.Escape()+"foo"+c.Reset(), c.Wrap("foo"))
-			require.Equal(t, c.Escape()+"foo"+c.Reset(), c.Wrap("foo"))
+		styles := []Style{
+			Color(i),
+			Combine(Color(i)),
 		}
 
-		{
-			c := Combine(Color(i))
-			require.Equal(t, c.Escape()+"foo"+c.Reset(), c.Wrap("foo"))
-			require.Equal(t, c.Escape()+"foo"+c.Reset(), c.Wrap("foo"))
+		for _, style := range styles {
+			want := style.Escape() + "foo" + style.Reset()
+			require.Equal(t, want, style.Wrap("foo"))
+			require.Equal(t, want, Wrap(style, "foo"))
 		}
 	}
 }
 
-func TestColor_WrapN(t *testing.T) {
+func TestWrapN(t *testing.T) {
 	for i, esc := range _strings {
 		if len(esc) == 0 {
 			continue
 		}
 
-		{
-			c := Color(i)
-			require.Equal(t, c.Escape()+"foo bar"+c.Reset(), c.WrapN("foo", "bar"))
-			require.Equal(t, c.Escape()+"foo bar"+c.Reset(), c.WrapN("foo", "bar"))
+		styles := []Style{
+			Color(i),
+			Combine(Color(i)),
 		}
 
-		{
-			c := Combine(Color(i))
-			require.Equal(t, c.Escape()+"foo bar"+c.Reset(), c.WrapN("foo", "bar"))
-			require.Equal(t, c.Escape()+"foo bar"+c.Reset(), c.WrapN("foo", "bar"))
+		for _, style := range styles {
+			want := style.Escape() + "foo bar" + style.Reset()
+			require.Equal(t, want, style.WrapN("foo", "bar"))
+			require.Equal(t, want, WrapN(style, "foo", "bar"))
 		}
 	}
 }
 
-func TestColor_Print(t *testing.T) {
+func TestPrint(t *testing.T) {
 	var (
 		stdout = _stdout
 		buf    bytes.Buffer
@@ -130,23 +135,26 @@ func TestColor_Print(t *testing.T) {
 			continue
 		}
 
-		{
-			c := Color(i)
-			c.Print("foo")
-			require.Equal(t, c.Escape()+"foo"+c.Reset(), buf.String())
-			buf.Reset()
+		styles := []Style{
+			Color(i),
+			Combine(Color(i)),
 		}
 
-		{
-			c := Combine(Color(i))
-			c.Print("foo")
-			require.Equal(t, c.Escape()+"foo"+c.Reset(), buf.String())
+		for _, style := range styles {
+			want := style.Escape() + "foo" + style.Reset()
+
 			buf.Reset()
+			style.Print("foo")
+			require.Equal(t, want, buf.String())
+
+			buf.Reset()
+			Print(style, "foo")
+			require.Equal(t, want, buf.String())
 		}
 	}
 }
 
-func TestColor_Printf(t *testing.T) {
+func TestPrintf(t *testing.T) {
 	var (
 		stdout = _stdout
 		buf    bytes.Buffer
@@ -162,23 +170,26 @@ func TestColor_Printf(t *testing.T) {
 			continue
 		}
 
-		{
-			c := Color(i)
-			c.Printf("foo%d", 1)
-			require.Equal(t, c.Escape()+"foo1"+c.Reset(), buf.String())
-			buf.Reset()
+		styles := []Style{
+			Color(i),
+			Combine(Color(i)),
 		}
 
-		{
-			c := Combine(Color(i))
-			c.Printf("foo%d", 1)
-			require.Equal(t, c.Escape()+"foo1"+c.Reset(), buf.String())
+		for _, style := range styles {
+			want := style.Escape() + "foo1" + style.Reset()
+
 			buf.Reset()
+			style.Printf("foo%d", 1)
+			require.Equal(t, want, buf.String())
+
+			buf.Reset()
+			Printf(style, "foo%d", 1)
+			require.Equal(t, want, buf.String())
 		}
 	}
 }
 
-func TestColor_Println(t *testing.T) {
+func TestPrintln(t *testing.T) {
 	var (
 		stdout = _stdout
 		buf    bytes.Buffer
@@ -194,150 +205,174 @@ func TestColor_Println(t *testing.T) {
 			continue
 		}
 
-		{
-			c := Color(i)
-			c.Println("foo", "bar")
-			require.Equal(t, c.Escape()+"foo bar"+c.Reset()+"\n", buf.String())
+		styles := []Style{
+			Color(i),
+			Combine(Color(i)),
+		}
+
+		for _, style := range styles {
+			want := style.Escape() + "foo bar" + style.Reset() + "\n"
+
 			buf.Reset()
-		}
+			style.Println("foo", "bar")
+			require.Equal(t, want, buf.String())
 
-		{
-			c := Combine(Color(i))
-			c.Println("foo", "bar")
-			require.Equal(t, c.Escape()+"foo bar"+c.Reset()+"\n", buf.String())
 			buf.Reset()
+			Println(style, "foo", "bar")
+			require.Equal(t, want, buf.String())
 		}
 	}
 }
 
-func TestColor_Sprint(t *testing.T) {
+func TestSprint(t *testing.T) {
 	for i, esc := range _strings {
 		if len(esc) == 0 {
 			continue
 		}
 
-		{
-			c := Color(i)
-			require.Equal(t, c.Escape()+"foo"+c.Reset(), c.Sprint("foo"))
+		styles := []Style{
+			Color(i),
+			Combine(Color(i)),
 		}
 
-		{
-			c := Combine(Color(i))
-			require.Equal(t, c.Escape()+"foo"+c.Reset(), c.Sprint("foo"))
+		for _, style := range styles {
+			want := style.Escape() + "foo" + style.Reset()
+			require.Equal(t, want, style.Sprint("foo"))
+			require.Equal(t, want, Sprint(style, "foo"))
 		}
 	}
 }
 
-func TestColor_Sprintf(t *testing.T) {
+func TestSprintf(t *testing.T) {
 	for i, esc := range _strings {
 		if len(esc) == 0 {
 			continue
 		}
 
-		{
-			c := Color(i)
-			require.Equal(t, c.Escape()+"foo1"+c.Reset(), c.Sprintf("foo%d", 1))
+		styles := []Style{
+			Color(i),
+			Combine(Color(i)),
 		}
 
-		{
-			c := Combine(Color(i))
-			require.Equal(t, c.Escape()+"foo1"+c.Reset(), c.Sprintf("foo%d", 1))
+		for _, style := range styles {
+			want := style.Escape() + "foo1" + style.Reset()
+			require.Equal(t, want, style.Sprintf("foo%d", 1))
+			require.Equal(t, want, Sprintf(style, "foo%d", 1))
 		}
 	}
 }
 
-func TestColor_Sprintln(t *testing.T) {
+func TestSprintln(t *testing.T) {
 	for i, esc := range _strings {
 		if len(esc) == 0 {
 			continue
 		}
 
-		{
-			c := Color(i)
-			require.Equal(t, c.Escape()+"foo bar"+c.Reset()+"\n", c.Sprintln("foo", "bar"))
+		styles := []Style{
+			Color(i),
+			Combine(Color(i)),
 		}
 
-		{
-			c := Combine(Color(i))
-			require.Equal(t, c.Escape()+"foo bar"+c.Reset()+"\n", c.Sprintln("foo", "bar"))
+		for _, style := range styles {
+			want := style.Escape() + "foo bar" + style.Reset() + "\n"
+			require.Equal(t, want, style.Sprintln("foo", "bar"))
+			require.Equal(t, want, Sprintln(style, "foo", "bar"))
 		}
 	}
 }
 
-func TestColor_Fprint(t *testing.T) {
+func TestFprint(t *testing.T) {
 	var buf bytes.Buffer
 
 	for i, esc := range _strings {
-		c := Color(i)
 		if len(esc) == 0 {
 			continue
 		}
 
-		{
-			_, err := c.Fprint(&buf, "foo")
-			require.NoError(t, err)
-			require.Equal(t, c.Escape()+"foo"+c.Reset(), buf.String())
-			buf.Reset()
+		styles := []Style{
+			Color(i),
+			Combine(Color(i)),
 		}
 
-		{
-			c := Combine(c)
-			_, err := c.Fprint(&buf, "foo")
-			require.NoError(t, err)
-			require.Equal(t, c.Escape()+"foo"+c.Reset(), buf.String())
+		for _, style := range styles {
+			var (
+				want = style.Escape() + "foo" + style.Reset()
+				err  error
+			)
+
 			buf.Reset()
+			_, err = style.Fprint(&buf, "foo")
+			require.NoError(t, err)
+			require.Equal(t, want, buf.String())
+
+			buf.Reset()
+			_, err = Fprint(&buf, style, "foo")
+			require.NoError(t, err)
+			require.Equal(t, want, buf.String())
 		}
 	}
 }
 
-func TestColor_Fprintf(t *testing.T) {
+func TestFprintf(t *testing.T) {
 	var buf bytes.Buffer
 
 	for i, esc := range _strings {
-		c := Color(i)
 		if len(esc) == 0 {
 			continue
 		}
 
-		{
-			_, err := c.Fprintf(&buf, "foo%d", 1)
-			require.NoError(t, err)
-			require.Equal(t, c.Escape()+"foo1"+c.Reset(), buf.String())
-			buf.Reset()
+		styles := []Style{
+			Color(i),
+			Combine(Color(i)),
 		}
 
-		{
-			c := Combine(c)
-			_, err := c.Fprintf(&buf, "foo%d", 1)
-			require.NoError(t, err)
-			require.Equal(t, c.Escape()+"foo1"+c.Reset(), buf.String())
+		for _, style := range styles {
+			var (
+				want = style.Escape() + "foo1" + style.Reset()
+				err  error
+			)
+
 			buf.Reset()
+			_, err = style.Fprintf(&buf, "foo%d", 1)
+			require.NoError(t, err)
+			require.Equal(t, want, buf.String())
+
+			buf.Reset()
+			_, err = Fprintf(&buf, style, "foo%d", 1)
+			require.NoError(t, err)
+			require.Equal(t, want, buf.String())
 		}
 	}
 }
 
-func TestColor_Fprintln(t *testing.T) {
+func TestFprintln(t *testing.T) {
 	var buf bytes.Buffer
 
 	for i, esc := range _strings {
-		c := Color(i)
 		if len(esc) == 0 {
 			continue
 		}
 
-		{
-			_, err := c.Fprintln(&buf, "foo", "bar")
-			require.NoError(t, err)
-			require.Equal(t, c.Escape()+"foo bar"+c.Reset()+"\n", buf.String())
-			buf.Reset()
+		styles := []Style{
+			Color(i),
+			Combine(Color(i)),
 		}
 
-		{
-			c := Combine(c)
-			_, err := c.Fprintln(&buf, "foo", "bar")
-			require.NoError(t, err)
-			require.Equal(t, c.Escape()+"foo bar"+c.Reset()+"\n", buf.String())
+		for _, style := range styles {
+			var (
+				want = style.Escape() + "foo bar" + style.Reset() + "\n"
+				err  error
+			)
+
 			buf.Reset()
+			_, err = style.Fprintln(&buf, "foo", "bar")
+			require.NoError(t, err)
+			require.Equal(t, want, buf.String())
+
+			buf.Reset()
+			_, err = Fprintln(&buf, style, "foo", "bar")
+			require.NoError(t, err)
+			require.Equal(t, want, buf.String())
 		}
 	}
 }
