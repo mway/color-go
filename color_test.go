@@ -376,3 +376,37 @@ func TestFprintln(t *testing.T) {
 		}
 	}
 }
+
+func TestCopy(t *testing.T) {
+	for i, esc := range _strings {
+		if len(esc) == 0 {
+			continue
+		}
+
+		styles := []Style{
+			Color(i),
+			Combine(Color(i)),
+		}
+
+		for _, style := range styles {
+			var (
+				want = style.Escape() + "foo" + style.Reset()
+				src  *bytes.Buffer
+				dst  bytes.Buffer
+				err  error
+			)
+
+			src = bytes.NewBufferString("foo")
+			dst.Reset()
+			_, err = style.Copy(&dst, src)
+			require.NoError(t, err)
+			require.Equal(t, want, dst.String())
+
+			src = bytes.NewBufferString("foo")
+			dst.Reset()
+			_, err = Copy(style, &dst, src)
+			require.NoError(t, err)
+			require.Equal(t, want, dst.String())
+		}
+	}
+}

@@ -135,6 +135,7 @@ var (
 
 // A Style styles text.
 type Style interface {
+	Copy(io.Writer, io.Reader) (int, error)
 	Escape() string
 	Fprint(io.Writer, ...any) (int, error)
 	Fprintf(io.Writer, string, ...any) (int, error)
@@ -194,6 +195,31 @@ func (c Color) WrapN(strs ...string) string {
 	}
 
 	return c.Escape() + buf.String() + c.Reset()
+}
+
+// Copy copies src to dest as in io.Copy, but wrapped in c.
+func (c Color) Copy(dst io.Writer, src io.Reader) (int, error) {
+	buf := _builders.Get()
+	defer _builders.Put(buf)
+
+	buf.WriteString(c.Escape()) //nolint:errcheck
+
+	n, err := dst.Write(buf.Bytes())
+	if err != nil {
+		return n, err
+	}
+
+	n64, err := io.Copy(dst, src)
+	if err != nil {
+		return n + int(n64), err
+	}
+	n += int(n64)
+
+	buf.Reset()
+	buf.WriteString(c.Reset()) //nolint:errcheck
+
+	m, err := dst.Write(buf.Bytes())
+	return n + m, err
 }
 
 // Print prints args as in fmt.Print, but wrapped in c.
@@ -373,6 +399,31 @@ func (c styles) WrapN(strs ...string) string {
 	return c.Escape() + buf.String() + c.Reset()
 }
 
+// Copy copies src to dest as in io.Copy, but wrapped in c.
+func (c styles) Copy(dst io.Writer, src io.Reader) (int, error) {
+	buf := _builders.Get()
+	defer _builders.Put(buf)
+
+	buf.WriteString(c.Escape()) //nolint:errcheck
+
+	n, err := dst.Write(buf.Bytes())
+	if err != nil {
+		return n, err
+	}
+
+	n64, err := io.Copy(dst, src)
+	if err != nil {
+		return n + int(n64), err
+	}
+	n += int(n64)
+
+	buf.Reset()
+	buf.WriteString(c.Reset()) //nolint:errcheck
+
+	m, err := dst.Write(buf.Bytes())
+	return n + m, err
+}
+
 // Print prints args as in fmt.Print, but wrapped in c.
 func (c styles) Print(args ...any) {
 	defer _stdout.Flush() //nolint:errcheck
@@ -493,6 +544,11 @@ func (c styles) Fprintln(w io.Writer, args ...any) (int, error) {
 // Enabled returns whether color is enabled based on terminal settings.
 func Enabled() bool {
 	return _hasColor
+}
+
+// Copy is a convenience function that calls s.Copy(dst, src).
+func Copy(s Style, dst io.Writer, src io.Reader) (int, error) {
+	return s.Copy(dst, src)
 }
 
 // Wrap is a convenience function that calls s.Wrap(msg).
