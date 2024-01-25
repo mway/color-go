@@ -1,3 +1,23 @@
+// Copyright (c) 2024 Matt Way
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to
+// deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+// sell copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+// IN THE THE SOFTWARE.
+
 package color
 
 import (
@@ -93,9 +113,9 @@ func TestWrap(t *testing.T) {
 		}
 
 		for _, style := range styles {
-			want := style.Escape() + "foo" + style.Reset()
-			require.Equal(t, want, style.Wrap("foo"))
-			require.Equal(t, want, Wrap(style, "foo"))
+			want := style.Escape() + t.Name() + style.Reset()
+			require.Equal(t, want, style.Wrap(t.Name()))
+			require.Equal(t, want, Wrap(style, t.Name()))
 		}
 	}
 }
@@ -112,9 +132,9 @@ func TestWrapN(t *testing.T) {
 		}
 
 		for _, style := range styles {
-			want := style.Escape() + "foo bar" + style.Reset()
-			require.Equal(t, want, style.WrapN("foo", "bar"))
-			require.Equal(t, want, WrapN(style, "foo", "bar"))
+			want := style.Escape() + t.Name() + " " + t.Name() + style.Reset()
+			require.Equal(t, want, style.WrapN(t.Name(), t.Name()))
+			require.Equal(t, want, WrapN(style, t.Name(), t.Name()))
 		}
 	}
 }
@@ -141,14 +161,14 @@ func TestPrint(t *testing.T) {
 		}
 
 		for _, style := range styles {
-			want := style.Escape() + "foo" + style.Reset()
+			want := style.Escape() + t.Name() + style.Reset()
 
 			buf.Reset()
-			style.Print("foo")
+			style.Print(t.Name())
 			require.Equal(t, want, buf.String())
 
 			buf.Reset()
-			Print(style, "foo")
+			Print(style, t.Name())
 			require.Equal(t, want, buf.String())
 		}
 	}
@@ -176,14 +196,14 @@ func TestPrintf(t *testing.T) {
 		}
 
 		for _, style := range styles {
-			want := style.Escape() + "foo1" + style.Reset()
+			want := style.Escape() + t.Name() + "1" + style.Reset()
 
 			buf.Reset()
-			style.Printf("foo%d", 1)
+			style.Printf("%s%d", t.Name(), 1)
 			require.Equal(t, want, buf.String())
 
 			buf.Reset()
-			Printf(style, "foo%d", 1)
+			Printf(style, "%s%d", t.Name(), 1)
 			require.Equal(t, want, buf.String())
 		}
 	}
@@ -211,14 +231,14 @@ func TestPrintln(t *testing.T) {
 		}
 
 		for _, style := range styles {
-			want := style.Escape() + "foo bar" + style.Reset() + "\n"
+			want := style.Escape() + t.Name() + " " + t.Name() + style.Reset() + "\n"
 
 			buf.Reset()
-			style.Println("foo", "bar")
+			style.Println(t.Name(), t.Name())
 			require.Equal(t, want, buf.String())
 
 			buf.Reset()
-			Println(style, "foo", "bar")
+			Println(style, t.Name(), t.Name())
 			require.Equal(t, want, buf.String())
 		}
 	}
@@ -236,9 +256,9 @@ func TestSprint(t *testing.T) {
 		}
 
 		for _, style := range styles {
-			want := style.Escape() + "foo" + style.Reset()
-			require.Equal(t, want, style.Sprint("foo"))
-			require.Equal(t, want, Sprint(style, "foo"))
+			want := style.Escape() + t.Name() + style.Reset()
+			require.Equal(t, want, style.Sprint(t.Name()))
+			require.Equal(t, want, Sprint(style, t.Name()))
 		}
 	}
 }
@@ -255,9 +275,9 @@ func TestSprintf(t *testing.T) {
 		}
 
 		for _, style := range styles {
-			want := style.Escape() + "foo1" + style.Reset()
-			require.Equal(t, want, style.Sprintf("foo%d", 1))
-			require.Equal(t, want, Sprintf(style, "foo%d", 1))
+			want := style.Escape() + t.Name() + "1" + style.Reset()
+			require.Equal(t, want, style.Sprintf("%s%d", t.Name(), 1))
+			require.Equal(t, want, Sprintf(style, "%s%d", t.Name(), 1))
 		}
 	}
 }
@@ -274,9 +294,9 @@ func TestSprintln(t *testing.T) {
 		}
 
 		for _, style := range styles {
-			want := style.Escape() + "foo bar" + style.Reset() + "\n"
-			require.Equal(t, want, style.Sprintln("foo", "bar"))
-			require.Equal(t, want, Sprintln(style, "foo", "bar"))
+			want := style.Escape() + t.Name() + " " + t.Name() + style.Reset() + "\n"
+			require.Equal(t, want, style.Sprintln(t.Name(), t.Name()))
+			require.Equal(t, want, Sprintln(style, t.Name(), t.Name()))
 		}
 	}
 }
@@ -296,17 +316,17 @@ func TestFprint(t *testing.T) {
 
 		for _, style := range styles {
 			var (
-				want = style.Escape() + "foo" + style.Reset()
+				want = style.Escape() + t.Name() + style.Reset()
 				err  error
 			)
 
 			buf.Reset()
-			_, err = style.Fprint(&buf, "foo")
+			_, err = style.Fprint(&buf, t.Name())
 			require.NoError(t, err)
 			require.Equal(t, want, buf.String())
 
 			buf.Reset()
-			_, err = Fprint(&buf, style, "foo")
+			_, err = Fprint(&buf, style, t.Name())
 			require.NoError(t, err)
 			require.Equal(t, want, buf.String())
 		}
@@ -328,17 +348,17 @@ func TestFprintf(t *testing.T) {
 
 		for _, style := range styles {
 			var (
-				want = style.Escape() + "foo1" + style.Reset()
+				want = style.Escape() + t.Name() + "1" + style.Reset()
 				err  error
 			)
 
 			buf.Reset()
-			_, err = style.Fprintf(&buf, "foo%d", 1)
+			_, err = style.Fprintf(&buf, "%s%d", t.Name(), 1)
 			require.NoError(t, err)
 			require.Equal(t, want, buf.String())
 
 			buf.Reset()
-			_, err = Fprintf(&buf, style, "foo%d", 1)
+			_, err = Fprintf(&buf, style, "%s%d", t.Name(), 1)
 			require.NoError(t, err)
 			require.Equal(t, want, buf.String())
 		}
@@ -360,17 +380,17 @@ func TestFprintln(t *testing.T) {
 
 		for _, style := range styles {
 			var (
-				want = style.Escape() + "foo bar" + style.Reset() + "\n"
+				want = style.Escape() + t.Name() + " " + t.Name() + style.Reset() + "\n"
 				err  error
 			)
 
 			buf.Reset()
-			_, err = style.Fprintln(&buf, "foo", "bar")
+			_, err = style.Fprintln(&buf, t.Name(), t.Name())
 			require.NoError(t, err)
 			require.Equal(t, want, buf.String())
 
 			buf.Reset()
-			_, err = Fprintln(&buf, style, "foo", "bar")
+			_, err = Fprintln(&buf, style, t.Name(), t.Name())
 			require.NoError(t, err)
 			require.Equal(t, want, buf.String())
 		}
@@ -390,19 +410,19 @@ func TestCopy(t *testing.T) {
 
 		for _, style := range styles {
 			var (
-				want = style.Escape() + "foo" + style.Reset()
+				want = style.Escape() + t.Name() + style.Reset()
 				src  *bytes.Buffer
 				dst  bytes.Buffer
 				err  error
 			)
 
-			src = bytes.NewBufferString("foo")
+			src = bytes.NewBufferString(t.Name())
 			dst.Reset()
 			_, err = style.Copy(&dst, src)
 			require.NoError(t, err)
 			require.Equal(t, want, dst.String())
 
-			src = bytes.NewBufferString("foo")
+			src = bytes.NewBufferString(t.Name())
 			dst.Reset()
 			_, err = Copy(style, &dst, src)
 			require.NoError(t, err)

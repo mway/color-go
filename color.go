@@ -1,3 +1,23 @@
+// Copyright (c) 2024 Matt Way
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to
+// deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+// sell copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+// IN THE THE SOFTWARE.
+
 // Package color provides color-based types and helpers.
 package color
 
@@ -135,7 +155,7 @@ var (
 
 // A Style styles text.
 type Style interface {
-	Copy(io.Writer, io.Reader) (int, error)
+	Copy(io.Writer, io.Reader) (int64, error)
 	Escape() string
 	Fprint(io.Writer, ...any) (int, error)
 	Fprintf(io.Writer, string, ...any) (int, error)
@@ -198,7 +218,7 @@ func (c Color) WrapN(strs ...string) string {
 }
 
 // Copy copies src to dest as in io.Copy, but wrapped in c.
-func (c Color) Copy(dst io.Writer, src io.Reader) (int, error) {
+func (c Color) Copy(dst io.Writer, src io.Reader) (int64, error) {
 	buf := _builders.Get()
 	defer _builders.Put(buf)
 
@@ -206,12 +226,12 @@ func (c Color) Copy(dst io.Writer, src io.Reader) (int, error) {
 
 	n, err := dst.Write(buf.Bytes())
 	if err != nil {
-		return n, err
+		return int64(n), err
 	}
 
 	n64, err := io.Copy(dst, src)
 	if err != nil {
-		return n + int(n64), err
+		return int64(n) + n64, err
 	}
 	n += int(n64)
 
@@ -219,7 +239,7 @@ func (c Color) Copy(dst io.Writer, src io.Reader) (int, error) {
 	buf.WriteString(c.Reset()) //nolint:errcheck
 
 	m, err := dst.Write(buf.Bytes())
-	return n + m, err
+	return int64(n + m), err
 }
 
 // Print prints args as in fmt.Print, but wrapped in c.
@@ -400,7 +420,7 @@ func (c styles) WrapN(strs ...string) string {
 }
 
 // Copy copies src to dest as in io.Copy, but wrapped in c.
-func (c styles) Copy(dst io.Writer, src io.Reader) (int, error) {
+func (c styles) Copy(dst io.Writer, src io.Reader) (int64, error) {
 	buf := _builders.Get()
 	defer _builders.Put(buf)
 
@@ -408,12 +428,12 @@ func (c styles) Copy(dst io.Writer, src io.Reader) (int, error) {
 
 	n, err := dst.Write(buf.Bytes())
 	if err != nil {
-		return n, err
+		return int64(n), err
 	}
 
 	n64, err := io.Copy(dst, src)
 	if err != nil {
-		return n + int(n64), err
+		return int64(n) + n64, err
 	}
 	n += int(n64)
 
@@ -421,7 +441,7 @@ func (c styles) Copy(dst io.Writer, src io.Reader) (int, error) {
 	buf.WriteString(c.Reset()) //nolint:errcheck
 
 	m, err := dst.Write(buf.Bytes())
-	return n + m, err
+	return int64(n + m), err
 }
 
 // Print prints args as in fmt.Print, but wrapped in c.
@@ -547,7 +567,7 @@ func Enabled() bool {
 }
 
 // Copy is a convenience function that calls s.Copy(dst, src).
-func Copy(s Style, dst io.Writer, src io.Reader) (int, error) {
+func Copy(s Style, dst io.Writer, src io.Reader) (int64, error) {
 	return s.Copy(dst, src)
 }
 
