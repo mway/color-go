@@ -430,3 +430,27 @@ func TestCopy(t *testing.T) {
 		}
 	}
 }
+
+func TestParseFgColor(t *testing.T) {
+	for name, want := range _fgNames {
+		have, err := ParseFgColor(name)
+		require.NoError(t, err)
+		require.Equal(t, want, have)
+	}
+
+	_, err := ParseFgColor("unknown-color-name")
+	require.ErrorIs(t, err, ErrInvalidColorName)
+	require.ErrorContains(t, err, "unknown-color-name")
+}
+
+func TestParseBgColor(t *testing.T) {
+	for name, want := range _bgNames {
+		have, err := ParseBgColor(name)
+		require.NoError(t, err)
+		require.Equal(t, want, have)
+	}
+
+	_, err := ParseBgColor("unknown-color-name")
+	require.ErrorIs(t, err, ErrInvalidColorName)
+	require.ErrorContains(t, err, "unknown-color-name")
+}

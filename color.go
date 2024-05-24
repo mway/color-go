@@ -30,6 +30,7 @@ import (
 	"os"
 
 	"github.com/mattn/go-isatty"
+	"go.mway.dev/errors"
 	"go.mway.dev/pool"
 )
 
@@ -96,6 +97,10 @@ const (
 )
 
 var (
+	// ErrInvalidColorName is returned when attempting to parse a color using
+	// an unknown name.
+	ErrInvalidColorName = errors.New("invalid color name")
+
 	_fd       = os.Stderr.Fd()
 	_stdout   = bufio.NewWriter(os.Stdout)
 	_hasColor = !isset("NO_COLOR") && os.Getenv("TERM") != "dumb" &&
@@ -148,6 +153,42 @@ var (
 		BgHiCyan:     "\x1b[106m",
 		BgHiWhite:    "\x1b[107m",
 	}
+	_fgNames = map[string]Color{
+		"black":      FgBlack,
+		"red":        FgRed,
+		"green":      FgGreen,
+		"yellow":     FgYellow,
+		"blue":       FgBlue,
+		"magenta":    FgMagenta,
+		"cyan":       FgCyan,
+		"white":      FgWhite,
+		"hi-black":   FgHiBlack,
+		"hi-red":     FgHiRed,
+		"hi-green":   FgHiGreen,
+		"hi-yellow":  FgHiYellow,
+		"hi-blue":    FgHiBlue,
+		"hi-magenta": FgHiMagenta,
+		"hi-cyan":    FgHiCyan,
+		"hi-white":   FgHiWhite,
+	}
+	_bgNames = map[string]Color{
+		"black":      BgBlack,
+		"red":        BgRed,
+		"green":      BgGreen,
+		"yellow":     BgYellow,
+		"blue":       BgBlue,
+		"magenta":    BgMagenta,
+		"cyan":       BgCyan,
+		"white":      BgWhite,
+		"hi-black":   BgHiBlack,
+		"hi-red":     BgHiRed,
+		"hi-green":   BgHiGreen,
+		"hi-yellow":  BgHiYellow,
+		"hi-blue":    BgHiBlue,
+		"hi-magenta": BgHiMagenta,
+		"hi-cyan":    BgHiCyan,
+		"hi-white":   BgHiWhite,
+	}
 
 	_ Style = Color(0)
 	_ Style = styles(nil)
@@ -174,6 +215,16 @@ type Style interface {
 
 // A Color is a terminal color.
 type Color uint8
+
+// ParseFgColor parses the given name into a foreground [Color].
+func ParseFgColor(name string) (Color, error) {
+	return parseColor(_fgNames, name)
+}
+
+// ParseBgColor parses the given name into a background [Color].
+func ParseBgColor(name string) (Color, error) {
+	return parseColor(_bgNames, name)
+}
 
 // Escape returns c's escape code.
 func (c Color) Escape() string {
@@ -629,4 +680,12 @@ func Fprintln(dst io.Writer, s Style, args ...any) (int, error) {
 func isset(key string) bool {
 	_, ok := os.LookupEnv(key)
 	return ok
+}
+
+func parseColor(src map[string]Color, name string) (Color, error) {
+	x, ok := src[name]
+	if !ok {
+		return Reset, errors.Wrap(ErrInvalidColorName, name)
+	}
+	return x, nil
 }
