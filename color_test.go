@@ -23,6 +23,7 @@ package color
 import (
 	"bufio"
 	"bytes"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -30,6 +31,20 @@ import (
 
 func init() {
 	_hasColor = true
+}
+
+func TestColor_Code(t *testing.T) {
+	for i, esc := range _strings {
+		if len(esc) == 0 {
+			continue
+		}
+
+		want := strconv.Itoa(i)
+		require.Equal(t, want, Color(i).Code())
+	}
+
+	require.Equal(t, "", Color(254).Code())
+	require.Equal(t, "", Combine(Color(254)).Code())
 }
 
 func TestColor_Escape(t *testing.T) {
@@ -41,6 +56,8 @@ func TestColor_Escape(t *testing.T) {
 		require.Equal(t, esc, Color(i).Escape())
 		require.Equal(t, esc, Combine(Color(i)).Escape())
 	}
+	require.Equal(t, "", Color(254).Escape())
+	require.Equal(t, "", Combine(Color(254)).Escape())
 }
 
 func TestColor_Escape_Reset_NoColor(t *testing.T) {
@@ -429,6 +446,15 @@ func TestCopy(t *testing.T) {
 			require.Equal(t, want, dst.String())
 		}
 	}
+}
+
+func TestMultiStyle_Code(t *testing.T) {
+	style := FgHiGreen.
+		With().
+		With(FgHiGreen).
+		With(BgGreen, Bold).
+		With(Underline.With(BlinkSlow, Italic))
+	require.Equal(t, "92;42;1;4;5;3", style.Code())
 }
 
 func TestParseFgColor(t *testing.T) {
