@@ -110,6 +110,7 @@ var (
 		func(x *bytes.Buffer) { x.Reset() },
 	)
 	_strings = [math.MaxUint8]string{
+		// Reset:        "\x1b[0m",
 		Reset:        "\x1b[0m",
 		Bold:         "\x1b[1m",
 		Faint:        "\x1b[2m",
@@ -191,11 +192,12 @@ var (
 	}
 
 	_ Style = Color(0)
-	_ Style = styles(nil)
+	_ Style = multiStyle{}
 )
 
 // A Style styles text.
 type Style interface {
+	Code() string
 	Copy(io.Writer, io.Reader) (int64, error)
 	Escape() string
 	Fprint(io.Writer, ...any) (int, error)
@@ -209,6 +211,7 @@ type Style interface {
 	Sprintf(string, ...any) string
 	Sprintln(...any) string
 	String() string
+	With(...Style) Style
 	Wrap(string) string
 	WrapN(...string) string
 }
@@ -248,6 +251,21 @@ func (c Color) String() string {
 	return _strings[c]
 }
 
+// With returns a [Style] with the given styles amended to the current color.
+func (c Color) With(styles ...Style) Style {
+	switch len(styles) {
+	case 0:
+		return c
+	case 1:
+		if x, ok := styles[0].(Color); ok && x == c {
+			return c
+		}
+	default:
+	}
+
+	return newMultiStyle(append([]Style{c}, styles...)...)
+}
+
 // Wrap wraps str with c.
 func (c Color) Wrap(str string) string {
 	return c.Escape() + str + c.Reset()
@@ -266,6 +284,15 @@ func (c Color) WrapN(strs ...string) string {
 	}
 
 	return c.Escape() + buf.String() + c.Reset()
+}
+
+// Code returns the ANSI code related to this color.
+func (c Color) Code() string {
+	x := _strings[c]
+	if len(x) == 0 {
+		return ""
+	}
+	return x[2 : len(x)-1]
 }
 
 // Copy copies src to dest as in io.Copy, but wrapped in c.
@@ -410,53 +437,85 @@ func (c Color) Fprintln(w io.Writer, args ...any) (int, error) {
 	return int(n), err
 }
 
-type styles []Style
+type multiStyle struct {
+	styles []Style
+	escape string
+}
+
+func newMultiStyle(s ...Style) Style {
+	if len(s) == 0 {
+		return multiStyle{}
+	}
+
+	buf := _builders.Get()
+	defer _builders.Put(buf)
+
+	// TODO(mway): Potentially unpack multiStyles
+	buf.WriteString("\x1b[") //nolint:errcheck
+	var written int
+	for _, style := range s {
+		code := style.Code()
+		if len(code) == 0 {
+			continue
+		}
+
+		if written > 0 {
+			buf.WriteByte(';') //nolint:errcheck
+		}
+		buf.WriteString(code) //nolint:errcheck
+		written++
+	}
+
+	if written == 0 {
+		return multiStyle{}
+	}
+
+	buf.WriteByte('m') //nolint:errcheck
+
+	return multiStyle{
+		styles: append([]Style(nil), s...),
+		escape: buf.String(),
+	}
+}
 
 // Combine combines colors into [Colors].
 func Combine(s ...Style) Style {
-	return append(styles(nil), s...)
+	return newMultiStyle(s...)
 }
 
-// Escape returns a concatenation of c's escape codes.
-func (c styles) Escape() string {
-	buf := _builders.Get()
-	defer _builders.Put(buf)
-
-	for i := range c {
-		buf.WriteString(c[i].Escape()) //nolint:errcheck
+func (s multiStyle) Escape() string {
+	if !Enabled() {
+		return ""
 	}
-
-	return buf.String()
+	return s.escape
 }
 
-// Reset returns the escape code the reset output after c.
-func (c styles) Reset() string {
-	if len(c) == 0 {
+func (s multiStyle) Reset() string {
+	if len(s.styles) == 0 {
 		return ""
 	}
 
-	return c[len(c)-1].Reset()
+	return s.styles[len(s.styles)-1].Reset()
 }
 
-// String returns c's escape code, regardless of whether color is enabled.
-func (c styles) String() string {
-	buf := _builders.Get()
-	defer _builders.Put(buf)
+func (s multiStyle) String() string {
+	return s.escape
+}
 
-	for i := range c {
-		buf.WriteString(c[i].String()) //nolint:errcheck
+func (s multiStyle) With(styles ...Style) Style {
+	if len(styles) == 0 {
+		return s
 	}
 
-	return buf.String()
+	return newMultiStyle(append([]Style{s}, styles...)...)
 }
 
-// Wrap wraps str with c.
-func (c styles) Wrap(str string) string {
-	return c.Escape() + str + c.Reset()
+func (s multiStyle) Wrap(str string) string {
+	return s.Escape() + str + s.Reset()
 }
 
 // WrapN wraps strs, joined by spaces, with c.
-func (c styles) WrapN(strs ...string) string {
+func (s multiStyle) WrapN(strs ...string) string {
 	buf := _builders.Get()
 	defer _builders.Put(buf)
 
@@ -467,15 +526,22 @@ func (c styles) WrapN(strs ...string) string {
 		buf.WriteString(strs[i]) //nolint:errcheck
 	}
 
-	return c.Escape() + buf.String() + c.Reset()
+	return s.Escape() + buf.String() + s.Reset()
+}
+
+func (s multiStyle) Code() string {
+	if len(s.escape) == 0 {
+		return ""
+	}
+	return s.escape[2 : len(s.escape)-1]
 }
 
 // Copy copies src to dest as in io.Copy, but wrapped in c.
-func (c styles) Copy(dst io.Writer, src io.Reader) (int64, error) {
+func (s multiStyle) Copy(dst io.Writer, src io.Reader) (int64, error) {
 	buf := _builders.Get()
 	defer _builders.Put(buf)
 
-	buf.WriteString(c.Escape()) //nolint:errcheck
+	buf.WriteString(s.Escape()) //nolint:errcheck
 
 	n, err := dst.Write(buf.Bytes())
 	if err != nil {
@@ -489,43 +555,43 @@ func (c styles) Copy(dst io.Writer, src io.Reader) (int64, error) {
 	n += int(n64)
 
 	buf.Reset()
-	buf.WriteString(c.Reset()) //nolint:errcheck
+	buf.WriteString(s.Reset()) //nolint:errcheck
 
 	m, err := dst.Write(buf.Bytes())
 	return int64(n + m), err
 }
 
 // Print prints args as in fmt.Print, but wrapped in c.
-func (c styles) Print(args ...any) {
+func (s multiStyle) Print(args ...any) {
 	defer _stdout.Flush() //nolint:errcheck
 
-	_stdout.WriteString(c.Escape()) //nolint:errcheck
+	_stdout.WriteString(s.Escape()) //nolint:errcheck
 	fmt.Fprint(_stdout, args...)    //nolint:errcheck
-	_stdout.WriteString(c.Reset())  //nolint:errcheck
+	_stdout.WriteString(s.Reset())  //nolint:errcheck
 }
 
 // Printf prints msg and args as in fmt.Printf, but wrapped in c.
-func (c styles) Printf(msg string, args ...any) {
+func (s multiStyle) Printf(msg string, args ...any) {
 	defer _stdout.Flush() //nolint:errcheck
 
-	_stdout.WriteString(c.Escape())    //nolint:errcheck
+	_stdout.WriteString(s.Escape())    //nolint:errcheck
 	fmt.Fprintf(_stdout, msg, args...) //nolint:errcheck
-	_stdout.WriteString(c.Reset())     //nolint:errcheck
+	_stdout.WriteString(s.Reset())     //nolint:errcheck
 }
 
 // Println prints args as in fmt.Println, but wrapped in c.
-func (c styles) Println(args ...any) {
+func (s multiStyle) Println(args ...any) {
 	defer _stdout.Flush() //nolint:errcheck
 
 	buf := _builders.Get()
 	defer _builders.Put(buf)
 
-	_stdout.WriteString(c.Escape()) //nolint:errcheck
+	_stdout.WriteString(s.Escape()) //nolint:errcheck
 	fmt.Fprintln(buf, args...)      //nolint:errcheck
 
 	var (
 		tmp = buf.Bytes()
-		esc = c.Reset()
+		esc = s.Reset()
 	)
 
 	if len(esc) > 0 {
@@ -538,28 +604,28 @@ func (c styles) Println(args ...any) {
 }
 
 // Sprint returns a string containing args as in fmt.Sprint, but wrapped in c.
-func (c styles) Sprint(args ...any) string {
-	return c.Escape() + fmt.Sprint(args...) + c.Reset()
+func (s multiStyle) Sprint(args ...any) string {
+	return s.Escape() + fmt.Sprint(args...) + s.Reset()
 }
 
 // Sprintf returns a string containing msg and args as in fmt.Sprintf, but
 // wrapped in c.
-func (c styles) Sprintf(msg string, args ...any) string {
-	return c.Escape() + fmt.Sprintf(msg, args...) + c.Reset()
+func (s multiStyle) Sprintf(msg string, args ...any) string {
+	return s.Escape() + fmt.Sprintf(msg, args...) + s.Reset()
 }
 
 // Sprintln returns a string containing args as in fmt.Sprintln, but wrapped
 // in c.
-func (c styles) Sprintln(args ...any) string {
+func (s multiStyle) Sprintln(args ...any) string {
 	buf := _builders.Get()
 	defer _builders.Put(buf)
 
-	buf.WriteString(c.Escape()) //nolint:errcheck
+	buf.WriteString(s.Escape()) //nolint:errcheck
 	fmt.Fprintln(buf, args...)  //nolint:errcheck
 
 	var (
 		tmp = buf.Bytes()
-		esc = c.Reset()
+		esc = s.Reset()
 	)
 
 	if len(esc) > 0 {
@@ -572,34 +638,34 @@ func (c styles) Sprintln(args ...any) string {
 }
 
 // Fprint prints args to w as in fmt.Fprint, but wrapped in c.
-func (c styles) Fprint(w io.Writer, args ...any) (int, error) {
-	esc := c.Escape()
+func (s multiStyle) Fprint(w io.Writer, args ...any) (int, error) {
+	esc := s.Escape()
 	fmt.Fprint(w, esc)                 //nolint:errcheck
 	n, _ := fmt.Fprint(w, args...)     //nolint:errcheck
-	m, err := fmt.Fprint(w, c.Reset()) //nolint:errcheck
+	m, err := fmt.Fprint(w, s.Reset()) //nolint:errcheck
 	return n + m + len(esc), err
 }
 
 // Fprintf prints msg and args to w as in [fmt.Fprintf], but wrapped in c.
-func (c styles) Fprintf(w io.Writer, msg string, args ...any) (int, error) {
-	esc := c.Escape()
+func (s multiStyle) Fprintf(w io.Writer, msg string, args ...any) (int, error) {
+	esc := s.Escape()
 	fmt.Fprint(w, esc)                   //nolint:errcheck
 	n, _ := fmt.Fprintf(w, msg, args...) //nolint:errcheck
-	m, err := fmt.Fprint(w, c.Reset())   //nolint:errcheck
+	m, err := fmt.Fprint(w, s.Reset())   //nolint:errcheck
 	return n + m + len(esc), err
 }
 
 // Fprintln prints args to w as in [fmt.Fprintln], but wrapped in c.
-func (c styles) Fprintln(w io.Writer, args ...any) (int, error) {
+func (s multiStyle) Fprintln(w io.Writer, args ...any) (int, error) {
 	buf := _builders.Get()
 	defer _builders.Put(buf)
 
-	buf.WriteString(c.Escape()) //nolint:errcheck
+	buf.WriteString(s.Escape()) //nolint:errcheck
 	fmt.Fprintln(buf, args...)  //nolint:errcheck
 
 	var (
 		tmp = buf.Bytes()
-		esc = c.Reset()
+		esc = s.Reset()
 	)
 
 	if len(esc) > 0 {

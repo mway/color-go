@@ -31,10 +31,12 @@ var Nop Style = nop{}
 
 type nop struct{}
 
+func (nop) Code() string   { return "" }
 func (nop) Escape() string { return "" }
 func (nop) Reset() string  { return "" }
 func (nop) String() string { return "" }
 
+func (nop) With(...Style) Style         { return nop{} }
 func (nop) Wrap(str string) string      { return str }
 func (nop) WrapN(strs ...string) string { return strings.Join(strs, " ") }
 

@@ -30,10 +30,12 @@ import (
 )
 
 func TestNop(t *testing.T) {
+	require.Zero(t, color.Nop.Code())
 	require.Zero(t, color.Nop.Escape())
 	require.Zero(t, color.Nop.Reset())
 	require.Zero(t, color.Nop.String())
 	require.Equal(t, t.Name(), color.Nop.Wrap(t.Name()))
+	require.Zero(t, color.Nop, color.Nop.With(color.FgRed))
 	require.Equal(
 		t,
 		fmt.Sprintf("%s %s", t.Name(), t.Name()),
