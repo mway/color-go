@@ -22,7 +22,7 @@ package color_test
 
 import (
 	"bytes"
-	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -35,11 +35,11 @@ func TestNop(t *testing.T) {
 	require.Zero(t, color.Nop.Reset())
 	require.Zero(t, color.Nop.String())
 	require.Equal(t, t.Name(), color.Nop.Wrap(t.Name()))
-	require.Zero(t, color.Nop, color.Nop.With(color.FgRed))
+	require.Equal(t, color.Nop, color.Nop.With(color.FgRed))
 	require.Equal(
 		t,
-		fmt.Sprintf("%s %s", t.Name(), t.Name()),
-		color.Nop.WrapN(t.Name(), t.Name()),
+		strings.Join([]string{t.Name(), t.Name()}, "delim"),
+		color.Nop.Join([]string{t.Name(), t.Name()}, "delim"),
 	)
 
 	var buf bytes.Buffer

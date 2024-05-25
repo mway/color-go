@@ -203,6 +203,7 @@ type Style interface {
 	Fprint(io.Writer, ...any) (int, error)
 	Fprintf(io.Writer, string, ...any) (int, error)
 	Fprintln(io.Writer, ...any) (int, error)
+	Join([]string, string) string
 	Print(...any)
 	Printf(string, ...any)
 	Println(...any)
@@ -213,7 +214,6 @@ type Style interface {
 	String() string
 	With(...Style) Style
 	Wrap(string) string
-	WrapN(...string) string
 }
 
 // A Color is a terminal color.
@@ -266,24 +266,24 @@ func (c Color) With(styles ...Style) Style {
 	return newMultiStyle(append([]Style{c}, styles...)...)
 }
 
-// Wrap wraps str with c.
-func (c Color) Wrap(str string) string {
-	return c.Escape() + str + c.Reset()
-}
-
-// WrapN wraps strs, joined by spaces, with c.
-func (c Color) WrapN(strs ...string) string {
+// Join joins each string (wrapped in this color) with the given delimeter.
+func (c Color) Join(elems []string, sep string) string {
 	buf := _builders.Get()
 	defer _builders.Put(buf)
 
-	for i := range strs {
+	for i, str := range elems {
 		if i > 0 {
-			buf.WriteByte(' ') //nolint:errcheck
+			buf.WriteString(sep) //nolint:errcheck
 		}
-		buf.WriteString(strs[i]) //nolint:errcheck
+		buf.WriteString(c.Wrap(str)) //nolint:errcheck
 	}
 
-	return c.Escape() + buf.String() + c.Reset()
+	return buf.String()
+}
+
+// Wrap wraps str with c.
+func (c Color) Wrap(str string) string {
+	return c.Escape() + str + c.Reset()
 }
 
 // Code returns the ANSI code related to this color.
@@ -510,23 +510,22 @@ func (s multiStyle) With(styles ...Style) Style {
 	return newMultiStyle(append([]Style{s}, styles...)...)
 }
 
-func (s multiStyle) Wrap(str string) string {
-	return s.Escape() + str + s.Reset()
-}
-
-// WrapN wraps strs, joined by spaces, with c.
-func (s multiStyle) WrapN(strs ...string) string {
+func (s multiStyle) Join(elems []string, sep string) string {
 	buf := _builders.Get()
 	defer _builders.Put(buf)
 
-	for i := range strs {
+	for i, str := range elems {
 		if i > 0 {
-			buf.WriteByte(' ') //nolint:errcheck
+			buf.WriteString(sep) //nolint:errcheck
 		}
-		buf.WriteString(strs[i]) //nolint:errcheck
+		buf.WriteString(s.Wrap(str)) //nolint:errcheck
 	}
 
-	return s.Escape() + buf.String() + s.Reset()
+	return buf.String()
+}
+
+func (s multiStyle) Wrap(str string) string {
+	return s.Escape() + str + s.Reset()
 }
 
 func (s multiStyle) Code() string {
@@ -688,14 +687,14 @@ func Copy(s Style, dst io.Writer, src io.Reader) (int64, error) {
 	return s.Copy(dst, src)
 }
 
+// Join is a convenience function that calls s.Join(elems, sep).
+func Join(s Style, elems []string, sep string) string {
+	return s.Join(elems, sep)
+}
+
 // Wrap is a convenience function that calls s.Wrap(msg).
 func Wrap(s Style, msg string) string {
 	return s.Wrap(msg)
-}
-
-// WrapN is a convenience function that calls s.WrapN(msgs...).
-func WrapN(s Style, msgs ...string) string {
-	return s.WrapN(msgs...)
 }
 
 // Print is a convenience function that calls s.Print(args...).

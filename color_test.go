@@ -118,6 +118,39 @@ func Test_String(t *testing.T) {
 	}
 }
 
+func TestJoin(t *testing.T) {
+	for i, esc := range _strings {
+		if len(esc) == 0 {
+			continue
+		}
+
+		styles := []Style{
+			Color(i),
+			Combine(Color(i)),
+		}
+
+		for _, style := range styles {
+			want := style.Escape() + t.Name() + style.Reset() + "delim" +
+				style.Escape() + t.Name() + style.Reset()
+			require.Equal(t, want, style.Join(
+				[]string{
+					t.Name(),
+					t.Name(),
+				},
+				"delim",
+			))
+			require.Equal(t, want, Join(
+				style,
+				[]string{
+					t.Name(),
+					t.Name(),
+				},
+				"delim",
+			))
+		}
+	}
+}
+
 func TestWrap(t *testing.T) {
 	for i, esc := range _strings {
 		if len(esc) == 0 {
@@ -133,25 +166,6 @@ func TestWrap(t *testing.T) {
 			want := style.Escape() + t.Name() + style.Reset()
 			require.Equal(t, want, style.Wrap(t.Name()))
 			require.Equal(t, want, Wrap(style, t.Name()))
-		}
-	}
-}
-
-func TestWrapN(t *testing.T) {
-	for i, esc := range _strings {
-		if len(esc) == 0 {
-			continue
-		}
-
-		styles := []Style{
-			Color(i),
-			Combine(Color(i)),
-		}
-
-		for _, style := range styles {
-			want := style.Escape() + t.Name() + " " + t.Name() + style.Reset()
-			require.Equal(t, want, style.WrapN(t.Name(), t.Name()))
-			require.Equal(t, want, WrapN(style, t.Name(), t.Name()))
 		}
 	}
 }

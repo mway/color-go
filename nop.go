@@ -36,9 +36,9 @@ func (nop) Escape() string { return "" }
 func (nop) Reset() string  { return "" }
 func (nop) String() string { return "" }
 
-func (nop) With(...Style) Style         { return nop{} }
-func (nop) Wrap(str string) string      { return str }
-func (nop) WrapN(strs ...string) string { return strings.Join(strs, " ") }
+func (nop) Join(elems []string, sep string) string { return strings.Join(elems, sep) }
+func (nop) With(...Style) Style                    { return nop{} }
+func (nop) Wrap(str string) string                 { return str }
 
 func (nop) Copy(dst io.Writer, src io.Reader) (int64, error) {
 	return io.Copy(dst, src)
