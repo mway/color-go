@@ -21,4 +21,4 @@
 package color
 
 // Version is the current version of the package.
-const Version = "v0.2.1-dev"
+const Version = "v0.3.0"
