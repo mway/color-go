@@ -35,7 +35,7 @@ func TestNop(t *testing.T) {
 	require.Zero(t, color.Nop.Reset())
 	require.Zero(t, color.Nop.String())
 	require.Equal(t, t.Name(), color.Nop.Wrap(t.Name()))
-	require.Equal(t, color.Nop, color.Nop.With(color.FgRed))
+	require.Equal(t, color.Combine(color.FgRed), color.Nop.With(color.FgRed))
 	require.Equal(
 		t,
 		strings.Join([]string{t.Name(), t.Name()}, "delim"),
