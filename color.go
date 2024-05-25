@@ -438,13 +438,17 @@ func (c Color) Fprintln(w io.Writer, args ...any) (int, error) {
 }
 
 type multiStyle struct {
-	styles []Style
 	escape string
+	styles []Style
 }
 
 func newMultiStyle(s ...Style) Style {
-	if len(s) == 0 {
+	switch len(s) {
+	case 0:
 		return multiStyle{}
+	case 1:
+		// TODO(mway): Use s[0] directly
+	default:
 	}
 
 	buf := _builders.Get()

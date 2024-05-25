@@ -37,7 +37,7 @@ func (nop) Reset() string  { return "" }
 func (nop) String() string { return "" }
 
 func (nop) Join(elems []string, sep string) string { return strings.Join(elems, sep) }
-func (nop) With(...Style) Style                    { return nop{} }
+func (nop) With(styles ...Style) Style             { return Combine(styles...) }
 func (nop) Wrap(str string) string                 { return str }
 
 func (nop) Copy(dst io.Writer, src io.Reader) (int64, error) {
